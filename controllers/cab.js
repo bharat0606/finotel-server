@@ -5,10 +5,7 @@ export const bookCab = async (req, res) => {
     //   console.log("req.fields", req.fields);
     //   console.log("req.files", req.files);
     try {
-      let fields = req.fields;
-
-      console.log("fields", fields)
-  
+      let fields = req.fields;  
       let cab = new Cab(fields);
       cab.bookedBy = req.user._id;     
   
