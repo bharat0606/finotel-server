@@ -13,7 +13,6 @@ export const bookHotel = async (req, res) => {
     order.from = order.bookingDetails.from
     order.to = order.bookingDetails.to
     order.session = {
-      "payment_intent": "PID",
       "payment_status": "PAID",
       "currency": "INR",
       "amount_total": amount

@@ -23,6 +23,10 @@ const cabSchema = new Schema(
         required: "Distance is required",
         trim: true,
       },
+      discount: {
+        type: Number,
+        trim: true,
+      },
       bookedBy: {
       type: ObjectId,
       ref: "User",
