@@ -10,8 +10,20 @@ const orderSchema = new mongoose.Schema(
     bookingDetails: {},
     session: {},
     orderedBy: { type: ObjectId, ref: "User" },
+    from: {
+      type: Date,
+      // required: "From Date is required",
+    },
+    to: {
+      type: Date,
+      // required: "To Date is required",
+    },
+    bed: {
+      type: Number,
+      // required: "Bed is required",
+    },
   },
-  { timestamps: true }
+  { timestamps: true },  
 );
 
 export default mongoose.model("Order", orderSchema);
