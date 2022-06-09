@@ -29,6 +29,12 @@ export const bookCab = async (req, res) => {
       .limit(24)
       .populate("bookedBy", "_id name")
       .exec();
-    // console.log(all);
     res.json(all);
+  };
+
+
+  export const cancelCab = async (req, res) => {
+    let removed = await Cab.findByIdAndDelete(req.params.cabId)
+      .exec();
+    res.json(removed);
   };
