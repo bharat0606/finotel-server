@@ -2,30 +2,32 @@ import Hotel from "../models/hotel";
 import Order from "../models/order";
 import fs from "fs";
 
+const moment = require('moment');  
+
 export const bookHotel = async (req, res) => {
   try {
-    const { hotelId, amount, bookingDetails } = req.body;
+    const { hotelId, amount, bookingDetails,discount } = req.body;
+    const bookingDetailsObj = JSON.parse(bookingDetails);
+
     let order = new Order();
     order.orderedBy = req.user._id;
     order.hotel = hotelId;
-    order.bookingDetails = JSON.parse(bookingDetails);
-    order.bed = order.bookingDetails.bed
-    order.from = order.bookingDetails.from
-    order.to = order.bookingDetails.to
+    order.bed = bookingDetailsObj.bed
+    order.from = bookingDetailsObj.from
+    order.to = bookingDetailsObj.to
     order.session = {
       "payment_status": "PAID",
       "currency": "INR",
-      "amount_total": amount
+      "amount_total": amount,
+      "discount": discount
     };
     order.save((err, result) => {
       if (err) {
-        console.log("saving order err => ", err);
         res.status(400).send("Error saving");
       }
       res.json(result);
     });
   } catch (err) {
-    console.log(err);
     res.status(400).json({
       err: err.message,
     });
@@ -46,13 +48,11 @@ export const create = async (req, res) => {
 
     hotel.save((err, result) => {
       if (err) {
-        console.log("saving hotel err => ", err);
         res.status(400).send("Error saving");
       }
       res.json(result);
     });
   } catch (err) {
-    console.log(err);
     res.status(400).json({
       err: err.message,
     });
@@ -81,7 +81,6 @@ export const sellerHotels = async (req, res) => {
     .select("-image.data")
     .populate("postedBy", "_id name")
     .exec();
-  // console.log(all);
   res.send(all);
 };
 
@@ -126,14 +125,13 @@ export const update = async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    console.log(err);
     res.status(400).send("Hotel update failed. Try again.");
   }
 };
 
 export const userHotelBookings = async (req, res) => {
   const all = await Order.find({ orderedBy: req.user._id })
-    .select("session bed from to bookingDetails")
+    .select("session bed from to")
     .populate("hotel", "-image.data")
     .populate("orderedBy", "_id name")
     .exec();
@@ -143,16 +141,29 @@ export const userHotelBookings = async (req, res) => {
 export const isAlreadyBooked = async (req, res) => {
   const { hotelId } = req.params;
   // find orders of the currently logged in user
-  const userOrders = await Order.find({ orderedBy: req.user._id })
-    .select("hotel")
+  // const userOrders = await Order.find({ orderedBy: req.user._id, from: { $lte: new Date() } , to: { $gte: new Date() } })
+  const userOrders = await Order.find({ orderedBy: req.user._id, hotel: hotelId })
+    .select("to from")
     .exec();
-  // check if hotel id is found in userOrders array
-  let ids = [];
+  const currentDate = moment(new Date()).format("YYYY-MM-DD");
+  let onGoingOrFuture = false;
+
   for (let i = 0; i < userOrders.length; i++) {
-    ids.push(userOrders[i].hotel.toString());
+    const fromDate = moment(userOrders[i].from).format("YYYY-MM-DD");
+    const toDate = moment(userOrders[i].to).format("YYYY-MM-DD");
+    // onGoing check
+    if (moment(fromDate).isSameOrBefore(currentDate) && moment(toDate).isSameOrAfter(currentDate)) {
+      onGoingOrFuture = true;
+      break;
+    }
+    // future booking check
+    if (moment(moment(fromDate).format("YYYY-MM-DD")).isAfter(currentDate)) {
+      onGoingOrFuture = true;
+      break;
+    }
   }
   res.json({
-    ok: ids.includes(hotelId),
+    ok: onGoingOrFuture,
   });
 };
 
@@ -195,7 +206,6 @@ export const checkHotelAvailability = async (req, res) => {
   let where = { hotel: hotelId };
 
   if (from && to) { // CASE 1
-    where = { hotel: hotelId };
     where = { ...where, from: { $lte: new Date(from) } }
     where = { ...where, to: { $gte: new Date(from) } }
   }
@@ -229,25 +239,19 @@ export const checkHotelAvailability = async (req, res) => {
   }
 
   let result4 = await Order.find(where).select("from to bed").exec();
-  where = {};
- 
-
-  let result = await Order.find(where).select("from to bed").exec();
-  // console.log("result1",result1)
-  // console.log("result2",result2)
-  // console.log("result3",result3)
-  // console.log("result4",result4)
 
   const finalResult = [
     ...result1,...result2,...result3,...result4
   ]
-
+  
+  const existingIds = []
   if(finalResult.length) {
     for (let i = 0; i < finalResult.length; i++) {
-      bookedBeds += finalResult[i].bed;
+      if(existingIds.indexOf(finalResult[i]._id.toString()) === -1) {
+          bookedBeds += finalResult[i].bed;
+          existingIds.push(finalResult[i]._id.toString())
+      }
     }
-  } else {
-    console.log("yes i can book")
   }
 
   if(!bookedBeds) {
@@ -256,10 +260,7 @@ export const checkHotelAvailability = async (req, res) => {
     });
   }
 
-  
-
   const remaingBeds = hotelObj.bed - bookedBeds;
-  console.log(remaingBeds, hotelObj.bed , bookedBeds,parseInt(bed))
   if(parseInt(bed) <= remaingBeds) {
     return res.json({
       canBook: true
@@ -274,7 +275,7 @@ export const checkHotelAvailability = async (req, res) => {
 export const getHotelBookings = async (req, res) => {
   let all = await Order.find({ hotel: req.params.hotelId })
     .limit(24)
-    .select("bed from to bookingDetails session")
+    .select("bed from to session")
     .populate("orderedBy", "name")
     .exec();
   res.json(all);

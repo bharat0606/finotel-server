@@ -7,20 +7,19 @@ const orderSchema = new mongoose.Schema(
       type: ObjectId,
       ref: "Hotel",
     },
-    bookingDetails: {},
     session: {},
     orderedBy: { type: ObjectId, ref: "User" },
     from: {
       type: Date,
-      // required: "From Date is required",
+      required: "From Date is required",
     },
     to: {
       type: Date,
-      // required: "To Date is required",
+      required: "To Date is required",
     },
     bed: {
       type: Number,
-      // required: "Bed is required",
+      required: "Bed is required",
     },
   },
   { timestamps: true },  
