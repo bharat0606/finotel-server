@@ -174,11 +174,11 @@ export const searchListings = async (req, res) => {
   if (date) {
     const fromDate = date.split(",");
     if (fromDate && fromDate[0]) {
-      where = { ...where, from: { $gte: new Date(fromDate[0]) } }
+      where = { ...where, from: { $lte: new Date(fromDate[0]) } }
     }
 
     if (fromDate && fromDate[1]) {
-      where = { ...where, to: { $lte: new Date(fromDate[1]) } }
+      where = { ...where, to: { $gte: new Date(fromDate[1]) } }
     }
   }
 
